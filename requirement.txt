@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+nltk
+transformers
+requests
+python-multipart
+torch
+torchvision 
+torchaudio

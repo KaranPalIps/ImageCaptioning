@@ -3,19 +3,37 @@ import os
 import torch
 import requests
 import shutil
-app = FastAPI()
 import nltk
 import time
-from nltk.corpus import stopwords
-from nltk.tokenize import word_tokenize
-# nltk.download('book')
+
 from PIL import Image
 from transformers import BlipProcessor, Blip2ForConditionalGeneration
+from bardapi import Bard
+from pydantic import BaseModel
+from fastapi.middleware.cors import CORSMiddleware
+from controllers import *
+
+app = FastAPI()
+
+# origins = [
+#     "*"
+# ]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins="*",
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 processor = BlipProcessor.from_pretrained("Salesforce/blip2-flan-t5-xl")
 model = Blip2ForConditionalGeneration.from_pretrained("Salesforce/blip2-flan-t5-xl")
 
+os.environ["_BARD_API_KEY"] = "agiRO1PpVlNxxwgojTuuXNgJfc6gqkT9rxNmcidbN-dPeniAreOC6dGiCqE0t4rkUFjNYA."
 
+class Caption(BaseModel):
+   caption: str
 
 @app.get("/")
 async def index():
@@ -65,26 +83,27 @@ async def UploadImage(file: UploadFile):
         return processor.decode(out[0], skip_special_tokens=True)
 
     caption = predict_step([dest])
-
+    caption2 = creatingCaption(caption)
     hashtag = hashtags(caption)
     print("--- %s seconds ---" % (time.time() - start_time))
     return {
-      'caption': caption, 
-      'hash-tags': hashtag
+      'image-description': caption, 
+      'hash-tags': hashtag,
+      'captions':caption2
     }   
 
 
 
-def hashtags(caption):
-  hashtag = []
-  stop_words = set(stopwords.words('english'))
-  word_tokens = word_tokenize(caption)
-  filtered_sentence = [w for w in word_tokens if not w in stop_words]
-  filtered_sentence = []
-  for w in word_tokens:
-    if w not in stop_words:
-      filtered_sentence.append(w)
-  X = len(filtered_sentence)
-  for i in filtered_sentence:
-    hashtag.append('#'+i)
-  return hashtag
+
+
+
+def creatingCaption(caption):
+   return Bard().get_answer(str(f'Create a few captions with emojis and hastags for the {caption}'))['content']
+
+@app.post("/poetic")
+def poeticCaption(caption: Caption):
+   return Bard().get_answer(str(f'Make this caption poetic {caption.caption}'))['content']
+
+@app.post("/qoute")
+def createQuote(caption: Caption):
+   return Bard().get_answer(str(f'Find a few qoutes related to this caption {caption.caption}'))['content']
