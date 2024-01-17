@@ -100,17 +100,9 @@ async def UploadImage(file: UploadFile):
 
 @app.post("/prompt")
 async def prompting(prompt: Prompt):
-    url = CAPTION_URL
-    headers = {
-        "Content-Type": "application/json"
-    }
-    response = requests.post(url, headers=headers, json={prompt}) # type: ignore
-    if response.status_code == 200:
-        data = response.json()
-        print('data', data)
-        return data
-    else:
-        return "Error:", response.status_code
+    response = llmmodel.generate_content(prompt.prompt)
+    return response.text
+
     
 
 def predict_step(image_paths):
