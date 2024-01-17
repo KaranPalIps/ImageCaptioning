@@ -10,10 +10,12 @@ import time
 
 from PIL import Image
 from transformers import BlipProcessor, Blip2ForConditionalGeneration
+import google.generativeai as genai
 from bardapi import Bard
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 from controllers import *
+from config import BARD_KEY
 
 app = FastAPI()
 
@@ -32,7 +34,10 @@ app.add_middleware(
 processor = BlipProcessor.from_pretrained("Salesforce/blip2-flan-t5-xl")
 model = Blip2ForConditionalGeneration.from_pretrained("Salesforce/blip2-flan-t5-xl")
 
-os.environ["_BARD_API_KEY"] = "fAjkZsTS1oWUPqPxJoOGBy0LGTXWewRIlE5pcVLGHh2ibCltkT_TRD8__lYC_9U2wfu9RA."
+os.environ["GOOGLE_API_KEY"] = BARD_KEY
+genai.configure(api_key= os.environ['GOOGLE_API_KEY'])
+
+llmmodel = genai.GenerativeModel('gemini-pro')
 
 CAPTION_URL = "https://88fc-34-125-148-121.ngrok-free.app/prompt"
 
@@ -124,35 +129,15 @@ def predict_step(image_paths):
         return processor.decode(out[0], skip_special_tokens=True)
 
 def creatingCaption(caption):
-    # return Bard().get_answer(str(f'Create a few captions with emojis and hashtags for the {caption}'))['content']
-     url = CAPTION_URL
-     headers = {
-        "Content-Type": "application/json"
-     }
-     response = requests.post(url+f"?prompt=Create a few captions with emojis and hashtags for the {caption}", headers=headers) # type: ignore
-     if response.status_code == 200:
-        data = response.json()
-        print('data', data)
-        return data['caption']
-     else:
-        return "Error:", response.status_code
+    response = llmmodel.generate_content(str(f'Create a few captions with emojis and hashtags for the {caption}'))
+    return response.text
 
 
 
 @app.post("/poetic")
 def poeticCaption(caption: Caption):
-    # return Bard().get_answer(str(f'Make this caption poetic {caption.caption}'))['content']
-     url = CAPTION_URL
-     headers = {
-        "Content-Type": "application/json"
-     }
-     response = requests.post(url+f"?prompt=Make this caption poetic{caption.caption}", headers=headers) # type: ignore
-     if response.status_code == 200:
-        data = response.json()
-        print('data', data)
-        return data['caption']
-     else:
-        return "Error:", response.status_code
+    response = llmmodel.generate_content(str(f'Make this caption poetic {caption.caption}'))
+    return response.text
 
     
 
@@ -160,49 +145,22 @@ def poeticCaption(caption: Caption):
 @app.post("/quote")
 def createQuote(caption: Caption):
     # return Bard().get_answer(str(f'Find a few quotes related to this caption {caption.caption}'))['content']
-     url = CAPTION_URL
-     headers = {
-        "Content-Type": "application/json"
-     }
-     response = requests.post(url+f"?prompt=Find a few quotes related to this caption{caption.caption}", headers=headers) # type: ignore
-     if response.status_code == 200:
-        data = response.json()
-        print('data', data)
-        return data['caption']
-     else:
-        return "Error:", response.status_code
+    response = llmmodel.generate_content(str(f'Find a few quotes related to this caption {caption.caption}'))
+    return response.text
 
 
 @app.post("/emotion")
 def emotionCaption(emotion: EmotionParameter):
     # return Bard().get_answer(str(f'Create a few captions with emojis and hashtags for the {emotion.image_description}, make sure that the captions convey {emotion.emotion} emotion'))['content']
-     url = CAPTION_URL
-     headers = {
-        "Content-Type": "application/json"
-     }
-     response = requests.post(url+f"?prompt=Create a few captions with emojis and hashtags for the {emotion.image_description}, make sure that the captions convey {emotion.emotion} emotion", headers=headers) # type: ignore
-     if response.status_code == 200:
-        data = response.json()
-        print('data', data)
-        return data['caption']
-     else:
-        return "Error:", response.status_code
+    response = llmmodel.generate_content(str(f'Create a few captions with emojis and hashtags for the {emotion.image_description}, make sure that the captions convey {emotion.emotion} emotion'))
+    return response.text
 
 
 @app.post('/questions')
 def populateQuestions(caption: Caption):
     # return Bard().get_answer(str(f'Give some interesting question on {caption.caption}'))['content']
-     url = CAPTION_URL
-     headers = {
-        "Content-Type": "application/json"
-     }
-     response = requests.post(url+f"?prompt=Create a few captions with emojis and hashtags for the {emotion.image_description}, make sure that the captions convey {emotion.emotion} emotion", headers=headers) # type: ignore
-     if response.status_code == 200:
-        data = response.json()
-        print('data', data)
-        return data['caption']
-     else:
-        return "Error:", response.status_code
+    response = llmmodel.generate_content(str(f'Give some interesting question on {caption.caption}'))
+    return response.text
 
 
 @app.post("/recheckCaption")
